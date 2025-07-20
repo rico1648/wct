@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCT Holdings Berhad - Attrition Analysis Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .header h2 {
+            font-size: 1.25rem;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        .tab-container {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            padding: 4px;
+        }
+
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tab-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+        }
+
+        .tab-button.active {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #93c5fd;
+        }
+
+        .tab-button:hover:not(.active) {
+            color: #374151;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .metric-card.blue {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .metric-card.green {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .metric-card.yellow {
+            background: #fefce8;
+            border-color: #fde047;
+        }
+
+        .metric-card.purple {
+            background: #faf5ff;
+            border-color: #d8b4fe;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-info h3 {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .metric-subtitle {
+            font-size: 0.75rem;
+        }
+
+        .blue h3, .blue .metric-subtitle { color: #2563eb; }
+        .blue .metric-value { color: #1e3a8a; }
+        .green h3, .green .metric-subtitle { color: #16a34a; }
+        .green .metric-value { color: #14532d; }
+        .yellow h3, .yellow .metric-subtitle { color: #ca8a04; }
+        .yellow .metric-value { color: #92400e; }
+        .purple h3, .purple .metric-subtitle { color: #9333ea; }
+        .purple .metric-value { color: #581c87; }
+
+        .icon {
+            width: 32px;
+            height: 32px;
+            opacity: 0.7;
+        }
+
+        .chart-container {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+
+        .table-container {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f9fafb;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 10px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge.red {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .badge.yellow {
+            background: #fefce8;
+            color: #ca8a04;
+        }
+
+        .badge.green {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .badge.blue {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .badge.orange {
+            background: #fff7ed;
+            color: #ea580c;
+        }
+
+        .badge.gray {
+            background: #f9fafb;
+            color: #6b7280;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #2563eb;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .card h4 {
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-weight: 500;
+        }
+
+        .improvement-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .improvement-value {
+            text-align: right;
+        }
+
+        .improvement-value .big {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #16a34a;
+        }
+
+        .improvement-value .small {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .footer {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .tab-nav {
+                flex-wrap: wrap;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><span><img width="32" src="https://www.wct.com.my/images/logo.png">&nbsp;WCT Holdings Berhad</span></h1>
+            <h2>Attrition Analysis & Workforce Transformation Dashboard</h2>
+            <p>Real-time monitoring of AI-enabled workforce optimization</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab-nav">
+                <button class="tab-button active" onclick="switchTab('overview')">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    Overview
+                </button>
+                <button class="tab-button" onclick="switchTab('productivity')">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 3v18h18V3H3zm16 16H5V5h14v14z"/>
+                        <path d="M7 12l3-3 2 2 4-4"/>
+                    </svg>
+                    Productivity KPIs
+                </button>
+                <button class="tab-button" onclick="switchTab('risks')">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+                        <path d="M11 14h2v2h-2v-2zm0-6h2v6h-2V8z"/>
+                    </svg>
+                    Risk Management
+                </button>
+                <button class="tab-button" onclick="switchTab('redeployment')">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zM4 18v-6h2.5l6 6H4zm16.5-9.5L19 7l-2.5 1.5L15 7l-1.5 1.5L12 7l-1.5 1.5L9 7 7.5 8.5 6 7l-1.5 1.5L3 7v2l1.5 1.5L6 11.5 7.5 10 9 11.5l1.5-1.5L12 11.5l1.5-1.5L15 11.5l1.5-1.5L18 11.5l1.5-1.5L21 11.5V9l-1.5-1.5z"/>
+                    </svg>
+                    Redeployment
+                </button>
+            </div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <!-- Key Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card blue">
+                    <div class="metric-header">
+                        <div class="metric-info">
+                            <h3>Total Headcount</h3>
+                            <div class="metric-value">1,387</div>
+                            <div class="metric-subtitle">Target: 1,247 (-10%)</div>
+                        </div>
+                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="metric-card green">
+                    <div class="metric-header">
+                        <div class="metric-info">
+                            <h3>Attrition Progress</h3>
+                            <div class="metric-value">63</div>
+                            <div class="metric-subtitle">45% of target</div>
+                        </div>
+                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="metric-card yellow">
+                    <div class="metric-header">
+                        <div class="metric-info">
+                            <h3>AI Implementation</h3>
+                            <div class="metric-value">68%</div>
+                            <div class="metric-subtitle">On track</div>
+                        </div>
+                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="metric-card purple">
+                    <div class="metric-header">
+                        <div class="metric-info">
+                            <h3>Cost Savings</h3>
+                            <div class="metric-value">RM 3.2M</div>
+                            <div class="metric-subtitle">YTD achieved</div>
+                        </div>
+                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attrition Trend Chart -->
+            <div class="chart-container">
+                <h3 class="chart-title">Monthly Attrition Tracking</h3>
+                <div class="chart-wrapper">
+                    <canvas id="attritionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Department Status Table -->
+            <div class="table-container">
+                <h3 class="chart-title">Department Transformation Status</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Current</th>
+                            <th>Target</th>
+                            <th>Reduction</th>
+                            <th>AI Readiness</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="departmentTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Productivity Tab -->
+        <div id="productivity" class="tab-content">
+            <!-- KPI Chart -->
+            <div class="chart-container">
+                <h3 class="chart-title">Productivity KPI Improvements</h3>
+                <div class="chart-wrapper">
+                    <canvas id="productivityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Improvement Cards -->
+            <div class="grid-3" id="improvementCards">
+            </div>
+        </div>
+
+        <!-- Risk Management Tab -->
+        <div id="risks" class="tab-content">
+            <div class="table-container">
+                <h3 class="chart-title">Risk Assessment & Mitigation</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Risk Factor</th>
+                            <th>Level</th>
+                            <th>Probability</th>
+                            <th>Impact</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="riskTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Redeployment Tab -->
+        <div id="redeployment" class="tab-content">
+            <!-- Pipeline Chart -->
+            <div class="chart-container">
+                <h3 class="chart-title">Employee Redeployment Pipeline</h3>
+                <div class="chart-wrapper">
+                    <canvas id="pipelineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Role Cards -->
+            <div class="grid-3" id="roleCards">
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Last updated: <span id="lastUpdated"></span> | Data refresh: Every 15 minutes</p>
+        </div>
+    </div>
+
+    <script>
+        // Data
+        const attritionData = [
+            { month: 'Jan 2025', planned: 3, actual: 2, target: 3 },
+            { month: 'Feb 2025', planned: 4, actual: 5, target: 4 },
+            { month: 'Mar 2025', planned: 3, actual: 3, target: 3 },
+            { month: 'Apr 2025', planned: 5, actual: 4, target: 5 },
+            { month: 'May 2025', planned: 4, actual: 6, target: 4 },
+            { month: 'Jun 2025', planned: 6, actual: 5, target: 6 },
+            { month: 'Jul 2025', planned: 5, actual: 4, target: 5 },
+            { month: 'Aug 2025', planned: 7, actual: 8, target: 7 },
+            { month: 'Sep 2025', planned: 6, actual: 7, target: 6 },
+            { month: 'Oct 2025', planned: 8, actual: 6, target: 8 },
+            { month: 'Nov 2025', planned: 7, actual: 9, target: 7 },
+            { month: 'Dec 2025', planned: 9, actual: 8, target: 9 }
+        ];
+
+        const departmentData = [
+            { name: 'Finance', current: 42, target: 29, attrition: 13, aiReady: 85 },
+            { name: 'HR', current: 28, target: 19, attrition: 9, aiReady: 78 },
+            { name: 'Property Mgmt', current: 312, target: 244, attrition: 68, aiReady: 62 },
+            { name: 'Engineering', current: 623, target: 602, attrition: 21, aiReady: 45 },
+            { name: 'Property Dev', current: 284, target: 258, attrition: 26, aiReady: 58 },
+            { name: 'IT/Admin', current: 38, target: 32, attrition: 6, aiReady: 92 }
+        ];
+
+        const kpiData = [
+            { metric: 'Invoice Processing/Day', before: 45, after: 65, improvement: 44 },
+            { metric: 'Tenant Query Response (hrs)', before: 4.2, after: 2.1, improvement: 50 },
+            { metric: 'Resume Screening (mins)', before: 15, after: 3, improvement: 80 },
+            { metric: 'Lease Processing (days)', before: 3.5, after: 1.8, improvement: 49 },
+            { metric: 'Month-end Closing (days)', before: 8, after: 5, improvement: 38 }
+        ];
+
+        const riskData = [
+            { risk: 'Service Disruption', level: 'Medium', probability: 35, impact: 'High', status: 'Monitoring' },
+            { risk: 'Knowledge Loss', level: 'Medium-High', probability: 45, impact: 'Medium', status: 'Mitigating' },
+            { risk: 'Employee Morale', level: 'Medium', probability: 30, impact: 'Medium', status: 'Addressing' },
+            { risk: 'AI Implementation Delay', level: 'Low', probability: 20, impact: 'High', status: 'Monitoring' }
+        ];
+
+        const pipelineData = [
+            { stage: 'Applications', count: 85, target: 80 },
+            { stage: 'Assessment', count: 65, target: 60 },
+            { stage: 'Training', count: 42, target: 40 },
+            { stage: 'Placement', count: 28, target: 30 },
+            { stage: 'Certification', count: 18, target: 25 }
+        ];
+
+        const roleData = [
+            { name: 'AI Prompt Engineers', positions: 8, applications: 24, training: 12, placed: 5 },
+            { name: 'Digital Project Coordinators', positions: 10, applications: 31, training: 18, placed: 8 },
+            { name: 'ESG Specialists', positions: 7, applications: 19, training: 9, placed: 4 }
+        ];
+
+        // Tab switching
+        function switchTab(tabId) {
+            // Remove active class from all buttons and content
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Chart initialization
+        function initCharts() {
+            // Attrition Trend Chart
+            const attritionCtx = document.getElementById('attritionChart').getContext('2d');
+            new Chart(attritionCtx, {
+                type: 'line',
+                data: {
+                    labels: attritionData.map(d => d.month),
+                    datasets: [
+                        {
+                            label: 'Planned Attrition',
+                            data: attritionData.map(d => d.planned),
+                            borderColor: '#8884d8',
+                            backgroundColor: 'rgba(136, 132, 216, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Actual Attrition',
+                            data: attritionData.map(d => d.actual),
+                            borderColor: '#82ca9d',
+                            backgroundColor: 'rgba(130, 202, 157, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Target',
+                            data: attritionData.map(d => d.target),
+                            borderColor: '#ffc658',
+                            backgroundColor: 'rgba(255, 198, 88, 0.1)',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Productivity Chart
+            const productivityCtx = document.getElementById('productivityChart').getContext('2d');
+            new Chart(productivityCtx, {
+                type: 'bar',
+                data: {
+                    labels: kpiData.map(d => d.metric),
+                    datasets: [
+                        {
+                            label: 'Before AI',
+                            data: kpiData.map(d => d.before),
+                            backgroundColor: '#8884d8'
+                        },
+                        {
+                            label: 'After AI',
+                            data: kpiData.map(d => d.after),
+                            backgroundColor: '#82ca9d'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Pipeline Chart
+            const pipelineCtx = document.getElementById('pipelineChart').getContext('2d');
+            new Chart(pipelineCtx, {
+                type: 'bar',
+                data: {
+                    labels: pipelineData.map(d => d.stage),
+                    datasets: [
+                        {
+                            label: 'Current',
+                            data: pipelineData.map(d => d.count),
+                            backgroundColor: '#8884d8'
+                        },
+                        {
+                            label: 'Target',
+                            data: pipelineData.map(d => d.target),
+                            backgroundColor: '#82ca9d'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Populate tables and cards
+        function populateContent() {
+            // Department table
+            const deptTableBody = document.getElementById('departmentTableBody');
+            departmentData.forEach(dept => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-weight: 500">${dept.name}</td>
+                    <td>${dept.current}</td>
+                    <td>${dept.target}</td>
+                    <td><span class="badge red">-${dept.attrition}</span></td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${dept.aiReady}%"></div>
+                        </div>
+                        <span style="font-size: 0.75rem; color: #6b7280">${dept.aiReady}%</span>
+                    </td>
+                    <td>
+                        <svg style="width: 16px; height: 16px; color: #16a34a" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                    </td>
+                `;
+                deptTableBody.appendChild(row);
+            });
+
+            // Improvement cards
+            const improvementCards = document.getElementById('improvementCards');
+            kpiData.forEach(kpi => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <h4>${kpi.metric}</h4>
+                    <div class="improvement-card">
+                        <div>
+                            <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 4px">Before: ${kpi.before}</p>
+                            <p style="font-size: 0.875rem; color: #6b7280">After: ${kpi.after}</p>
+                        </div>
+                        <div class="improvement-value">
+                            <div class="big">+${kpi.improvement}%</div>
+                            <div class="small">Improvement</div>
+                        </div>
+                    </div>
+                `;
+                improvementCards.appendChild(card);
+            });
+
+            // Risk table
+            const riskTableBody = document.getElementById('riskTableBody');
+            riskData.forEach(risk => {
+                const row = document.createElement('tr');
+                const levelClass = risk.level.includes('High') ? 'red' : 
+                                 risk.level.includes('Medium') ? 'yellow' : 'green';
+                const probClass = risk.probability > 40 ? 'red' : 
+                                risk.probability > 25 ? 'yellow' : 'green';
+                const statusClass = risk.status === 'Mitigating' ? 'blue' : 
+                                  risk.status === 'Addressing' ? 'orange' : 'gray';
+                
+                row.innerHTML = `
+                    <td style="font-weight: 500">${risk.risk}</td>
+                    <td><span class="badge ${levelClass}">${risk.level}</span></td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${risk.probability}%; background-color: ${probClass === 'red' ? '#dc2626' : probClass === 'yellow' ? '#ca8a04' : '#16a34a'}"></div>
+                        </div>
+                        <span style="font-size: 0.75rem; color: #6b7280">${risk.probability}%</span>
+                    </td>
+                    <td>${risk.impact}</td>
+                    <td><span class="badge ${statusClass}">${risk.status}</span></td>
+                `;
+                riskTableBody.appendChild(row);
+            });
+
+            // Role cards
+            const roleCards = document.getElementById('roleCards');
+            roleData.forEach(role => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <h4>${role.name}</h4>
+                    <p class="card-subtitle">${role.positions} positions available</p>
+                    <div style="margin-top: 12px">
+                        <div class="stat-row">
+                            <span>Applications:</span>
+                            <span class="stat-value">${role.applications}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>In Training:</span>
+                            <span class="stat-value">${role.training}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Placed:</span>
+                            <span class="stat-value">${role.placed}</span>
+                        </div>
+                    </div>
+                `;
+                roleCards.appendChild(card);
+            });
+
+            // Update timestamp
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            populateContent();
+            // Delay chart initialization to ensure DOM is ready
+            setTimeout(initCharts, 100);
+        });
+
+        // Simulate real-time updates every 5 minutes (300000ms)
+        setInterval(function() {
+            // Update timestamp
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+            
+            // In a real application, you would fetch new data here
+            console.log('Data refreshed at:', new Date().toLocaleString());
+        }, 300000);
+
+        // Add click handlers for tab buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach((button, index) => {
+                const tabIds = ['overview', 'productivity', 'risks', 'redeployment'];
+                button.addEventListener('click', function() {
+                    switchTab(tabIds[index]);
+                });
+            });
+        });
+
+        function switchTab(tabId) {
+            // Remove active class from all buttons and content
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding content
+            const tabIndex = ['overview', 'productivity', 'risks', 'redeployment'].indexOf(tabId);
+            document.querySelectorAll('.tab-button')[tabIndex].classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
